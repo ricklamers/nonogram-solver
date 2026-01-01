@@ -1,0 +1,3 @@
+[submodule "glucose-sat"]
+	path = glucose-sat
+	url = https://github.com/audemard/glucose.git
