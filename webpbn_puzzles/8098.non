@@ -1,0 +1,48 @@
+catalogue "webpbn.com #8098"
+title "Domino Logic III (Abstract pattern)"
+by "Josh Greifer"
+copyright "(c) Copyright 2010 by Josh Greifer"
+width 19
+height 19
+
+rows
+3
+1
+3,1
+1
+3,1
+1
+3,1
+1
+3,1
+1
+3,1
+1
+3,1
+1
+3,1
+1
+3,1
+1
+1
+
+columns
+1
+1
+1,3
+1
+1,3
+1
+1,3
+1
+1,3
+1
+1,3
+1
+1,3
+1
+1,3
+1
+1,3
+1
+3

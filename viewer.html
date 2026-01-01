@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nonogram Solver Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #08080c;
+      --bg-secondary: #0e0e14;
+      --bg-tertiary: #14141c;
+      --bg-card: #111118;
+      --border: #222233;
+      --border-hover: #3a3a55;
+      --text-primary: #e8e8f0;
+      --text-secondary: #8888a0;
+      --text-muted: #555566;
+      --accent-cyan: #00d4ff;
+      --accent-magenta: #ff00aa;
+      --accent-green: #00ff88;
+      --accent-yellow: #ffd000;
+      --accent-red: #ff4466;
+      --cell-black: #e8e8f0;
+      --cell-white: #18181f;
+      --cell-unknown: #2a2a3a;
+      --clue-bg: #0c0c12;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       LOAD OVERLAY
+    ═══════════════════════════════════════════════════════════════════════ */
+    .load-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      gap: 2rem;
+    }
+
+    .load-overlay.hidden { display: none; }
+
+    .load-overlay h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .load-overlay p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .load-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+      border: none;
+      border-radius: 0.75rem;
+      color: white;
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .load-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0, 212, 255, 0.3);
+    }
+
+    .load-hint {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-tertiary);
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+    }
+
+    input[type="file"] { display: none; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       HEADER NAV
+    ═══════════════════════════════════════════════════════════════════════ */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      z-index: 100;
+      gap: 1.5rem;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .nav-tab {
+      padding: 0.5rem 1rem;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-tertiary);
+    }
+
+    .nav-tab.active {
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+      font-weight: 600;
+    }
+
+    .header-stats {
+      margin-left: auto;
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .header-stats span {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-value { color: var(--accent-cyan); font-weight: 600; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       GALLERY VIEW
+    ═══════════════════════════════════════════════════════════════════════ */
+    .gallery-view {
+      display: none;
+      padding: 80px 1.5rem 2rem;
+    }
+
+    .gallery-view.active { display: block; }
+
+    .gallery-controls {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .filter-btn.active {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      color: var(--bg-primary);
+      font-weight: 600;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .gallery-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .gallery-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .gallery-card-preview {
+      aspect-ratio: 1;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+    }
+
+    .gallery-card-info {
+      padding: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .gallery-card-title {
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 0.25rem;
+    }
+
+    .gallery-card-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .gallery-card-badge {
+      font-size: 0.65rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .gallery-card-badge.exact { background: var(--accent-green); color: var(--bg-primary); }
+    .gallery-card-badge.valid { background: var(--accent-magenta); color: white; }
+    .gallery-card-badge.partial { background: var(--accent-red); color: white; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       SINGLE VIEW
+    ═══════════════════════════════════════════════════════════════════════ */
+    .single-view {
+      display: none;
+      height: calc(100vh - 60px);
+      margin-top: 60px;
+    }
+
+    .single-view.active { display: flex; }
+
+    .single-sidebar {
+      width: 320px;
+      min-width: 320px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .puzzle-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .puzzle-author {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+
+    .puzzle-badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 0.3rem 0.7rem;
+      border-radius: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge.unique { background: var(--accent-cyan); color: var(--bg-primary); }
+    .badge.multi { background: var(--accent-yellow); color: var(--bg-primary); }
+    .badge.exact { background: var(--accent-green); color: var(--bg-primary); }
+    .badge.valid { background: var(--accent-magenta); color: white; }
+    .badge.partial { background: var(--accent-red); color: white; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .info-item {
+      background: var(--bg-tertiary);
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+    }
+
+    .info-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: auto;
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .kbd {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.4rem;
+      background: var(--bg-primary);
+      border-radius: 0.25rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .single-main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow: hidden;
+    }
+
+    .nonogram-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .view-toggle-btn {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.8rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-toggle-btn.active {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      color: var(--bg-primary);
+    }
+
+    .nonogram-wrapper {
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       NONOGRAM GRID (Scalable)
+    ═══════════════════════════════════════════════════════════════════════ */
+    .nonogram {
+      display: grid;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .nonogram-cell {
+      background: var(--cell-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .nonogram-cell.black { background: var(--cell-black); }
+    .nonogram-cell.white { background: var(--cell-white); }
+    .nonogram-cell.unknown { 
+      background: var(--cell-unknown);
+      color: var(--text-muted);
+    }
+
+    .nonogram-cell.clue {
+      background: var(--clue-bg);
+      color: var(--text-secondary);
+    }
+
+    .nonogram-cell.clue-spacer {
+      background: var(--bg-primary);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .single-view {
+        flex-direction: column;
+      }
+      
+      .single-sidebar {
+        width: 100%;
+        min-width: unset;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .single-main {
+        padding: 1rem;
+      }
+      
+      .header-stats {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+      
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Load Overlay -->
+  <div class="load-overlay" id="load-overlay">
+    <h1>Nonogram Solver</h1>
+    <p>Based on Batenburg & Kosters (2009)</p>
+    
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">Select a dataset:</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;">
+        <button class="load-btn" style="padding: 0.75rem 1.25rem; font-size: 0.95rem;" onclick="loadDataset('results-combined.json')">
+          All (159)
+        </button>
+        <button class="load-btn" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; background: linear-gradient(135deg, #00ff88, #00d4ff);" onclick="loadDataset('results.json')">
+          WebPBN (120)
+        </button>
+        <button class="load-btn" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; background: linear-gradient(135deg, #ffd000, #ff8800);" onclick="loadDataset('results_gnonograms.json')">
+          GNonograms (7)
+        </button>
+        <button class="load-btn" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; background: linear-gradient(135deg, #ff00aa, #ff4466);" onclick="loadDataset('results_qnonograms1.json')">
+          QNonograms (20)
+        </button>
+      </div>
+    </div>
+    
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">— or —</p>
+    
+    <input type="file" id="file-input" accept=".json">
+    <button class="load-btn" style="background: var(--bg-tertiary); border: 1px solid var(--border);" onclick="document.getElementById('file-input').click()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Load Custom JSON
+    </button>
+  </div>
+
+  <!-- Header -->
+  <header class="header" id="header" style="display: none;">
+    <div class="logo">Nonogram Solver</div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-view="gallery">Gallery</button>
+      <button class="nav-tab" data-view="single">Single View</button>
+    </nav>
+    <div class="header-stats">
+      <span><span class="stat-value" id="stat-count">0</span> puzzles</span>
+      <span><span class="stat-value" id="stat-solved">0</span> solved</span>
+      <span><span class="stat-value" id="stat-time">0ms</span> total</span>
+    </div>
+  </header>
+
+  <!-- Gallery View -->
+  <div class="gallery-view" id="gallery-view">
+    <div class="gallery-controls">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="small">≤15×15</button>
+      <button class="filter-btn" data-filter="medium">16-30</button>
+      <button class="filter-btn" data-filter="large">31+</button>
+      <button class="filter-btn" data-filter="unique">Unique</button>
+      <button class="filter-btn" data-filter="multi">Multi</button>
+    </div>
+    <div class="gallery-grid" id="gallery-grid"></div>
+  </div>
+
+  <!-- Single View -->
+  <div class="single-view" id="single-view">
+    <aside class="single-sidebar">
+      <div>
+        <h1 class="puzzle-title" id="puzzle-title">—</h1>
+        <p class="puzzle-author" id="puzzle-author"></p>
+      </div>
+      
+      <div class="puzzle-badges" id="puzzle-badges"></div>
+      
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Size</div>
+          <div class="info-value" id="info-size">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Time</div>
+          <div class="info-value" id="info-time">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Solver</div>
+          <div class="info-value" id="info-solver">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Index</div>
+          <div class="info-value" id="info-index">—</div>
+        </div>
+      </div>
+      
+      <div class="nav-buttons">
+        <button class="nav-btn" id="btn-prev">
+          <span>← Prev</span>
+          <span class="kbd">←</span>
+        </button>
+        <button class="nav-btn" id="btn-next">
+          <span>Next →</span>
+          <span class="kbd">→</span>
+        </button>
+      </div>
+    </aside>
+    
+    <main class="single-main">
+      <div class="nonogram-container">
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" data-show="expected">Expected</button>
+          <button class="view-toggle-btn" data-show="actual">Our Solution</button>
+          <button class="view-toggle-btn" data-show="diff">Diff</button>
+        </div>
+        <div class="nonogram-wrapper" id="nonogram-display"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let puzzles = [];
+    let filteredPuzzles = [];
+    let currentIndex = 0;
+    let currentFilter = 'all';
+    let currentShowMode = 'expected';
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FILE LOADING
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    async function loadDataset(filename) {
+      try {
+        const response = await fetch(filename);
+        if (!response.ok) throw new Error('File not found: ' + filename);
+        const data = await response.json();
+        loadPuzzles(data, filename);
+      } catch (err) {
+        alert('Error loading ' + filename + ': ' + err.message);
+      }
+    }
+    
+    function loadPuzzles(data, sourceName = 'custom') {
+      puzzles = data;
+      filteredPuzzles = [...puzzles];
+      
+      document.getElementById('load-overlay').classList.add('hidden');
+      document.getElementById('header').style.display = 'flex';
+      
+      // Update logo to show which dataset
+      const label = sourceName.replace('results', '').replace('.json', '').replace(/^[-_]/, '') || 'WebPBN';
+      document.querySelector('.logo').textContent = 'Nonogram Solver · ' + (label || 'Custom');
+      
+      updateStats();
+      renderGallery();
+      setView('gallery');
+    }
+    
+    document.getElementById('file-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        loadPuzzles(JSON.parse(text), file.name);
+      } catch (err) {
+        alert('Error loading JSON: ' + err.message);
+      }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NAVIGATION
+    // ═══════════════════════════════════════════════════════════════════════
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => setView(tab.dataset.view));
+    });
+
+    function setView(view) {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.nav-tab[data-view="${view}"]`).classList.add('active');
+      
+      document.getElementById('gallery-view').classList.toggle('active', view === 'gallery');
+      document.getElementById('single-view').classList.toggle('active', view === 'single');
+      
+      if (view === 'single') {
+        renderSinglePuzzle();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FILTERING
+    // ═══════════════════════════════════════════════════════════════════════
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilter();
+        renderGallery();
+      });
+    });
+
+    function applyFilter() {
+      filteredPuzzles = puzzles.filter(p => {
+        const maxDim = Math.max(p.width, p.height);
+        switch (currentFilter) {
+          case 'small': return maxDim <= 15;
+          case 'medium': return maxDim > 15 && maxDim <= 30;
+          case 'large': return maxDim > 30;
+          case 'unique': return p.isUnique;
+          case 'multi': return !p.isUnique;
+          default: return true;
+        }
+      });
+      currentIndex = 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATS
+    // ═══════════════════════════════════════════════════════════════════════
+    function updateStats() {
+      document.getElementById('stat-count').textContent = puzzles.length;
+      document.getElementById('stat-solved').textContent = puzzles.filter(p => p.isSolved).length;
+      const totalTime = puzzles.reduce((s, p) => s + p.solveTimeMs, 0);
+      document.getElementById('stat-time').textContent = totalTime.toFixed(1) + 'ms';
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // GALLERY
+    // ═══════════════════════════════════════════════════════════════════════
+    function renderGallery() {
+      const grid = document.getElementById('gallery-grid');
+      grid.innerHTML = '';
+      
+      filteredPuzzles.forEach((puzzle, idx) => {
+        const card = document.createElement('div');
+        card.className = 'gallery-card';
+        card.onclick = () => openPuzzle(idx);
+        
+        const title = puzzle.title || puzzle.name;
+        const badgeClass = puzzle.status.toLowerCase();
+        
+        card.innerHTML = `
+          <div class="gallery-card-preview">
+            ${createMiniGrid(puzzle)}
+          </div>
+          <div class="gallery-card-info">
+            <div class="gallery-card-title">${escapeHtml(title)}</div>
+            <div class="gallery-card-meta">
+              <span>${puzzle.width}×${puzzle.height}</span>
+              <span>${puzzle.solveTimeMs.toFixed(1)}ms</span>
+              <span class="gallery-card-badge ${badgeClass}">${puzzle.status}</span>
+            </div>
+          </div>
+        `;
+        
+        grid.appendChild(card);
+      });
+    }
+
+    function createMiniGrid(puzzle) {
+      const solution = puzzle.expectedSolution || puzzle.actualSolution;
+      if (!solution) return '<span style="color:var(--text-muted)">No solution</span>';
+      
+      const maxDim = Math.max(puzzle.width, puzzle.height);
+      const cellSize = Math.max(2, Math.min(8, Math.floor(140 / maxDim)));
+      
+      let html = `<div style="display:grid;grid-template-columns:repeat(${puzzle.width},${cellSize}px);gap:1px;background:var(--border);">`;
+      
+      for (let i = 0; i < puzzle.height; i++) {
+        for (let j = 0; j < puzzle.width; j++) {
+          const char = solution[i * puzzle.width + j];
+          const color = char === '1' ? 'var(--cell-black)' : 'var(--cell-white)';
+          html += `<div style="width:${cellSize}px;height:${cellSize}px;background:${color}"></div>`;
+        }
+      }
+      
+      html += '</div>';
+      return html;
+    }
+
+    function openPuzzle(idx) {
+      currentIndex = idx;
+      setView('single');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SINGLE VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    document.getElementById('btn-prev').onclick = () => navigate(-1);
+    document.getElementById('btn-next').onclick = () => navigate(1);
+
+    document.addEventListener('keydown', (e) => {
+      if (document.getElementById('single-view').classList.contains('active')) {
+        if (e.key === 'ArrowLeft') navigate(-1);
+        if (e.key === 'ArrowRight') navigate(1);
+        if (e.key === 'Escape') setView('gallery');
+      }
+    });
+
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < filteredPuzzles.length) {
+        currentIndex = newIndex;
+        renderSinglePuzzle();
+      }
+    }
+
+    // View toggle
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentShowMode = btn.dataset.show;
+        renderSinglePuzzle();
+      });
+    });
+
+    function renderSinglePuzzle() {
+      if (filteredPuzzles.length === 0) return;
+      
+      const puzzle = filteredPuzzles[currentIndex];
+      const title = puzzle.title || puzzle.name;
+      
+      document.getElementById('puzzle-title').textContent = title;
+      document.getElementById('puzzle-author').textContent = puzzle.author ? `by ${puzzle.author}` : '';
+      
+      // Badges
+      const badges = document.getElementById('puzzle-badges');
+      badges.innerHTML = `
+        <span class="badge ${puzzle.isUnique ? 'unique' : 'multi'}">${puzzle.isUnique ? 'Unique' : 'Multi'}</span>
+        <span class="badge ${puzzle.status.toLowerCase()}">${puzzle.status}</span>
+      `;
+      
+      // Info
+      document.getElementById('info-size').textContent = `${puzzle.width}×${puzzle.height}`;
+      document.getElementById('info-time').textContent = puzzle.solveTimeMs.toFixed(2) + 'ms';
+      document.getElementById('info-solver').textContent = puzzle.solverLevel;
+      document.getElementById('info-index').textContent = `${currentIndex + 1} / ${filteredPuzzles.length}`;
+      
+      // Nav buttons
+      document.getElementById('btn-prev').disabled = currentIndex === 0;
+      document.getElementById('btn-next').disabled = currentIndex === filteredPuzzles.length - 1;
+      
+      // Render nonogram
+      const container = document.getElementById('nonogram-display');
+      container.innerHTML = '';
+      
+      let solution;
+      if (currentShowMode === 'expected') {
+        solution = puzzle.expectedSolution;
+      } else if (currentShowMode === 'actual') {
+        solution = puzzle.actualSolution;
+      } else {
+        solution = null; // diff mode
+      }
+      
+      container.appendChild(createScaledNonogram(puzzle, solution, currentShowMode === 'diff'));
+    }
+
+    function createScaledNonogram(puzzle, solution, showDiff = false) {
+      const rowClues = puzzle.rowClues;
+      const colClues = puzzle.colClues;
+      
+      const maxRowClues = Math.max(...rowClues.map(r => r.length), 1);
+      const maxColClues = Math.max(...colClues.map(c => c.length), 1);
+      
+      const totalCols = maxRowClues + puzzle.width;
+      const totalRows = maxColClues + puzzle.height;
+      
+      // Calculate cell size to fit in viewport
+      const container = document.querySelector('.single-main');
+      const availW = container.clientWidth - 64;
+      const availH = container.clientHeight - 100;
+      
+      const cellW = Math.floor(availW / totalCols);
+      const cellH = Math.floor(availH / totalRows);
+      const cellSize = Math.max(8, Math.min(40, Math.min(cellW, cellH)));
+      
+      // Clue cell size slightly larger for readability
+      const clueSize = Math.max(cellSize, 16);
+      const fontSize = Math.max(8, Math.min(14, cellSize * 0.6));
+      
+      const grid = document.createElement('div');
+      grid.className = 'nonogram';
+      grid.style.gridTemplateColumns = `repeat(${maxRowClues}, ${clueSize}px) repeat(${puzzle.width}, ${cellSize}px)`;
+      grid.style.gridTemplateRows = `repeat(${maxColClues}, ${clueSize}px) repeat(${puzzle.height}, ${cellSize}px)`;
+      
+      // Top-left corner spacers + column clues
+      for (let r = 0; r < maxColClues; r++) {
+        for (let c = 0; c < maxRowClues; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'nonogram-cell clue-spacer';
+          grid.appendChild(cell);
+        }
+        for (let c = 0; c < puzzle.width; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'nonogram-cell clue';
+          cell.style.fontSize = fontSize + 'px';
+          const clueIdx = r - (maxColClues - colClues[c].length);
+          if (clueIdx >= 0 && clueIdx < colClues[c].length) {
+            cell.textContent = colClues[c][clueIdx];
+          }
+          grid.appendChild(cell);
+        }
+      }
+      
+      // Grid rows with row clues
+      for (let r = 0; r < puzzle.height; r++) {
+        // Row clues
+        const padding = maxRowClues - rowClues[r].length;
+        for (let i = 0; i < padding; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'nonogram-cell clue';
+          grid.appendChild(cell);
+        }
+        for (const clue of rowClues[r]) {
+          const cell = document.createElement('div');
+          cell.className = 'nonogram-cell clue';
+          cell.style.fontSize = fontSize + 'px';
+          cell.textContent = clue;
+          grid.appendChild(cell);
+        }
+        
+        // Grid cells
+        for (let c = 0; c < puzzle.width; c++) {
+          const cell = document.createElement('div');
+          const idx = r * puzzle.width + c;
+          
+          if (showDiff) {
+            const exp = puzzle.expectedSolution ? puzzle.expectedSolution[idx] : null;
+            const act = puzzle.actualSolution ? puzzle.actualSolution[idx] : null;
+            
+            if (exp === act) {
+              cell.className = 'nonogram-cell ' + (exp === '1' ? 'black' : 'white');
+            } else {
+              cell.className = 'nonogram-cell';
+              cell.style.background = 'var(--accent-red)';
+            }
+          } else if (solution) {
+            const char = solution[idx];
+            cell.className = 'nonogram-cell ' + (char === '1' ? 'black' : char === '0' ? 'white' : 'unknown');
+            if (char === 'x') cell.textContent = '?';
+          } else {
+            cell.className = 'nonogram-cell unknown';
+          }
+          
+          grid.appendChild(cell);
+        }
+      }
+      
+      return grid;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════════════════════════════════
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

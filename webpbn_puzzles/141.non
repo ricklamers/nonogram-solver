@@ -1,0 +1,50 @@
+catalogue "webpbn.com #141"
+title "don't worry, be happy"
+by "Kristen Finley"
+copyright "(c) Copyright 2005 by Kristen Finley"
+width 20
+height 20
+
+rows
+6,6
+6,6
+6,6
+0
+0
+4
+4
+4
+4
+1,4,1
+1,1
+1,1
+2,2
+2,2
+2,2
+4,4
+4,4
+4,4
+8
+4
+
+columns
+7
+4
+3,2
+3,2
+3,2
+3,2
+3,2
+3,2
+5,2
+5,2
+5,2
+5,2
+3,2
+3,2
+3,2
+3,2
+3,2
+3,2
+4
+7

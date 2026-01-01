@@ -1,0 +1,30 @@
+catalogue "webpbn.com #7"
+title "wave"
+by "Valerie Mates"
+copyright "(c) Copyright 2004 by Valerie Mates"
+width 10
+height 10
+
+rows
+3,3
+3,3
+3,3
+3,3
+3,3
+3,3
+3,3
+3,2
+3,2
+3,3
+
+columns
+3
+5
+7,1
+2,5
+1,4
+3,2
+5
+7,1
+2,5
+1,4

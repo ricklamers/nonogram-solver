@@ -1,0 +1,30 @@
+catalogue "webpbn.com #155"
+title "(Sort of)"
+by "Thomas Reinke"
+copyright "(c) Copyright 2005 by Thomas Reinke"
+width 10
+height 10
+
+rows
+5
+2,1
+2,1
+7
+1,1,1
+1,1,3
+1,1,1,1
+1,3,1
+3,1,1
+2
+
+columns
+4
+1,1
+1,1,1
+3,1
+1,6
+1,1,1
+9
+1,1,1,1
+1,1,1
+3

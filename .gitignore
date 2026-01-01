@@ -1,0 +1,24 @@
+# Build
+build/
+*.o
+*.a
+
+# Results (generated)
+results*.json
+
+# External dependencies (cloned repos)
+nono-bench/
+nonogram-db/
+
+# Temp files
+*.cnf
+*.out
+/tmp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
